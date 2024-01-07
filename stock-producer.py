@@ -12,22 +12,26 @@ stock_symbols = ['GOOGL', 'META', 'AMZN']
 index_symbols = ['^GSPC', '^FCHI', '^N225'] # S&P 500, CAC 40, Nikkei 225
 stock_symbols_and_indexes = stock_symbols + index_symbols
 
+# Create Kafka topics for stocks and indices
+stock_topics = [f'stock_{stock_symbol}' for stock_symbol in stock_symbols]
+
 # Setup Kafka producer
 producer = KafkaProducer(bootstrap_servers=bootstrap_servers, value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
 # Function to retrieve and publish stock prices
 def publish_stock_prices():
-    while True:
-        start_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
-        end_date = datetime.now().strftime('%Y-%m-%d')
+    start_date = (datetime.now() - timedelta(weeks=520)).strftime('%Y-%m-%d')
+    end_date = datetime.now().strftime('%Y-%m-%d')
+    total_iterations = 0
 
-        # Download data for stocks and indices
-        stock_data = yf.download(stock_symbols_and_indexes, start=start_date, end=end_date)
-
+    # Download data for stocks and indices
+    stock_data = yf.download(stock_symbols_and_indexes, start=start_date, end=end_date, interval='1wk')
+    
+    while total_iterations < len(stock_data):
         if not stock_data.empty:
             # Iterate over each timestamp in the stock data
             for index, row in stock_data.iterrows():
-                timestamp = index.strftime('%Y-%m-%d %H:%M:%S')
+                timestamp = index.strftime('%Y-%m-%d')
 
                 # Iterate over each stock symbol
                 for stock_symbol in stock_symbols:
@@ -49,11 +53,13 @@ def publish_stock_prices():
                     producer.send(f'stock_{stock_symbol}', value=data)
                     print("New data: {}".format(data))
 
+                total_iterations += 1
+                time.sleep(0.1)
+
         else:
             print("No data retrieved.")
-        
 
 try:
     publish_stock_prices()
 except KeyboardInterrupt:
-    print("Script stop")
+    print("Script stopped")

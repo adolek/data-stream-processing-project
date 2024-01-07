@@ -3,10 +3,18 @@ from datetime import datetime
 import json
 import pandas as pd
 import statsmodels.api as sm
+from river.ensemble import BaggingRegressor
+from river.neighbors import KNNRegressor
+from river.tree import HoeffdingTreeRegressor
+from river.preprocessing import OneHotEncoder, StandardScaler
+from river import compose
+from sklearn import linear_model, metrics
+from evaluate_model import evaluate
+import csv
 
 # Define the list of stock symbols and index symbols
 stock_symbols = ['GOOGL', 'META', 'AMZN']
-index_symbols = ['SP500', 'CAC40', 'Nikkei']
+index_symbols = ['^GSPC', '^FCHI', '^N225'] # S&P 500, CAC 40, Nikkei 225
 
 # Create Kafka topics for stocks and indices
 stock_topics = [f'stock_{stock_symbol}' for stock_symbol in stock_symbols]
@@ -18,42 +26,49 @@ consumer = KafkaConsumer(
     group_id='monitor-group'
 )
 
-def online_learning():
+# Initialize models
+rf = BaggingRegressor(HoeffdingTreeRegressor(grace_period=100, leaf_prediction='adaptive', model_selector_decay=0.9), n_models=10)
+knn = KNNRegressor(n_neighbors = 10, window_size=100)
+ht = HoeffdingTreeRegressor(grace_period=100, leaf_prediction='adaptive', model_selector_decay=0.9)
+
+
+def kafka_stream_to_csv(file_path):
     # Subscribe to all topics
     consumer.subscribe(stock_topics)
 
-    # Initialize data storage
-    stock_data = {stock_symbol: pd.DataFrame(columns=index_symbols) for stock_symbol in stock_symbols}
-
     try:
-        while True:
-            # Poll for new messages
-            records = consumer.poll(timeout_ms=1000)  
+        with open(file_path, 'w', newline='') as csvfile:
+            fieldnames = ['timestamp', 'symbol', 'price', 'sp500', 'cac40', 'nikkei']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
 
-            for topic_partition, records in records.items():
-                for record in records:
-                    # Decode the value from bytes to a string
-                    value_str = record.value.decode('utf-8')
-                    data_dict = json.loads(value_str)
+            while True:
+                # Poll for new messages
+                records = consumer.poll(timeout_ms=1000)
 
-                    symbol = data_dict['symbol']
+                for topic_partition, records in records.items():
+                    for record in records:
+                        # Decode the value from bytes to a string
+                        value_str = record.value.decode('utf-8')
+                        data_dict = json.loads(value_str)
+                        print(data_dict)
+                        
+                        # Extract index prices
+                        sp500_price = data_dict['index_prices']['^GSPC']
+                        cac40_price = data_dict['index_prices']['^FCHI']
+                        nikkei_price = data_dict['index_prices']['^N225']
 
-                    # Update stock data with received feature values
-                    if symbol in stock_symbols:
-                        stock_data[symbol].loc[data_dict['timestamp']] = data_dict
+                        # Write data to CSV
+                        writer.writerow({
+                            'timestamp': data_dict['timestamp'],
+                            'symbol': data_dict['symbol'],
+                            'price': data_dict['price'],
+                            'sp500': sp500_price,
+                            'cac40': cac40_price,
+                            'nikkei': nikkei_price
+                        })
 
-                        # Perform online learning when new stock data is received
-                        stock_name = symbol
-                        #y = data_dict['price']  # Dependent variable for the selected stock
-                        y = pd.Series(data_dict['price'])  # Convert to pandas Series
-
-                        # Linear Regression
-                        X = stock_data[stock_name][index_symbols]  # Independent variables
-                        X = sm.add_constant(X)  # Adding a constant
-
-                        lr_model = sm.OLS(y, X).fit()
-                        print(f"Linear Regression Model Summary for {stock_name}:\n")
-                        print(lr_model.summary())
+                consumer.commit()
 
     except KeyboardInterrupt:
         pass
@@ -61,4 +76,17 @@ def online_learning():
         consumer.close()
 
 if __name__ == "__main__":
-    online_learning()
+    kafka_stream_to_csv('output_data.csv')
+    
+
+
+# Example of using the streaming data with the evaluate function
+# stream = kafka_stream()
+# print(strea)
+# Adjust parameters as needed
+#result_df, dates = evaluate(stream, knn, n_wait=10, verbose=True)
+
+
+
+
+
