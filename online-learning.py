@@ -3,7 +3,6 @@ from datetime import datetime
 import json
 import pandas as pd
 import statsmodels.api as sm
-from evaluate_model import evaluate
 import csv
 from river.stream import iter_pandas
 from river import linear_model
