@@ -26,17 +26,21 @@ consumer = KafkaConsumer(
     group_id='monitor-group'
 )
 
-# Initialize models
-rf = BaggingRegressor(HoeffdingTreeRegressor(grace_period=100, leaf_prediction='adaptive', model_selector_decay=0.9), n_models=10)
-knn = KNNRegressor(n_neighbors = 10, window_size=100)
-ht = HoeffdingTreeRegressor(grace_period=100, leaf_prediction='adaptive', model_selector_decay=0.9)
-
 
 def kafka_stream_to_csv(file_path):
     # Subscribe to all topics
     consumer.subscribe(stock_topics)
 
     try:
+        # Create CSV writers for each stock symbol
+        csv_writers = {stock_symbol: csv.DictWriter(open(f'dataset_{stock_symbol}.csv', 'w', newline=''),
+                                                    fieldnames=['timestamp', 'symbol', 'price', 'sp500', 'cac40', 'nikkei'])
+                       for stock_symbol in stock_symbols}
+        
+        # Write headers to CSV files
+        for csv_writer in csv_writers.values():
+            csv_writer.writeheader()
+        
         with open(file_path, 'w', newline='') as csvfile:
             fieldnames = ['timestamp', 'symbol', 'price', 'sp500', 'cac40', 'nikkei']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -58,8 +62,9 @@ def kafka_stream_to_csv(file_path):
                         cac40_price = data_dict['index_prices']['^FCHI']
                         nikkei_price = data_dict['index_prices']['^N225']
 
-                        # Write data to CSV
-                        writer.writerow({
+                        # Write data to the corresponding CSV file
+                        csv_writer = csv_writers[data_dict['symbol']]
+                        csv_writer.writerow({
                             'timestamp': data_dict['timestamp'],
                             'symbol': data_dict['symbol'],
                             'price': data_dict['price'],

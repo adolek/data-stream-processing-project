@@ -20,12 +20,12 @@ producer = KafkaProducer(bootstrap_servers=bootstrap_servers, value_serializer=l
 
 # Function to retrieve and publish stock prices
 def publish_stock_prices():
-    start_date = (datetime.now() - timedelta(weeks=520)).strftime('%Y-%m-%d')
+    start_date = (datetime.now() - timedelta(days=365*3)).strftime('%Y-%m-%d')
     end_date = datetime.now().strftime('%Y-%m-%d')
     total_iterations = 0
 
     # Download data for stocks and indices
-    stock_data = yf.download(stock_symbols_and_indexes, start=start_date, end=end_date, interval='1wk')
+    stock_data = yf.download(stock_symbols_and_indexes, start=start_date, end=end_date)
     
     while total_iterations < len(stock_data):
         if not stock_data.empty:
