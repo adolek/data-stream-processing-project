@@ -35,6 +35,17 @@ python3 stock-producer.py
 python3 stock-consumer.py
 ```
 
+5. Play with the notebook with batch and online regression models
+```bash
+batch_and_online_learning.ipynb
+```
+
+## Authors
+
+* **Adrien Oleksiak** - *M2DS IP Paris, Ecole Polytechnique* 
+
+* **Elia Lejzerowicz** - *M2DS IP Paris, Ecole Polytechnique* 
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
