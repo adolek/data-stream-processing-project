@@ -9,7 +9,6 @@ from river.tree import HoeffdingTreeRegressor
 from river.preprocessing import OneHotEncoder, StandardScaler
 from river import compose
 from sklearn import linear_model, metrics
-from evaluate_model import evaluate
 import csv
 
 # Define the list of stock symbols and index symbols
