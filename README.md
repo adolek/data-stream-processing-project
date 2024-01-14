@@ -4,10 +4,13 @@ This project is a real-time streaming application using Kafka for stream process
 
 The objective is to compare the performances of online (or adapative) regression models with batch regression models.
 
-The technologies and libraries used are:
+The main technologies and libraries used are:
 - Kafka
+- yahoofinance API
 - River
 - Scikit-learn
+
+The project has been realized in the context of the "MAP670G - Data Stream Processing" at Ecole Polytechnique within the M2 Data Science program.
 
 ## Getting Started
 
@@ -23,13 +26,15 @@ git clone https://github.com/adolek/data-stream-processing-project
 pip install -r requirements.txt
 ```
 
-3. Make sure Kafka is running on your local machine
+3. Make sure zookeeper and kafka servers are running in separate terminals
 ```bash
 bin/zookeeper-server-start.sh config/zookeeper.properties
+```
+```bash
 bin/kafka-server-start.sh config/server.properties
 ```
 
-4. Run in separate terminals the following scripts:
+4. Run in separate terminals the following scripts
 ```bash
 python3 stock-producer.py
 python3 stock-consumer.py
